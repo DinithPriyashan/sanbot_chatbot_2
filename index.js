@@ -17,7 +17,11 @@ function output(input) {
   // Remove digits - not sure if this is best
   // But solves problem of entering something like 'hi1'
 
-  let text = input.toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, "").replace(/[\d]/gu, "").trim();
+  let text = input.normalize("NFC").toLowerCase()
+    .replace(/[^\p{L}\p{N}\s]/gu, "")
+    .replace(/[\d]/gu, "")
+    .replace(/\s+/gu, " ")
+    .trim();
   text = text
     .replace(/ a /g, " ")   // 'tell me a story' -> 'tell me story'
     .replace(/i feel /g, "")
@@ -48,7 +52,9 @@ function compare(promptsArray, repliesArray, string) {
   let replyFound = false;
   for (let x = 0; x < promptsArray.length; x++) {
     for (let y = 0; y < promptsArray[x].length; y++) {
-      if (promptsArray[x][y] === string) {
+      const prompt = promptsArray[x][y].normalize("NFC").toLowerCase();
+      if (prompt === string
+        || (string.length >= 3 && (string.includes(prompt) || prompt.includes(string)))) {
         let replies = repliesArray[x];
         reply = replies[Math.floor(Math.random() * replies.length)];
         replyFound = true;

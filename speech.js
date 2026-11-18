@@ -12,7 +12,7 @@ const textToSpeech = (string) => {
     || voices.find((item) => item.lang.startsWith(language.split("-")[0]));
 
   if (voice) utterance.voice = voice;
-  utterance.lang = voice?.lang || "en-US";
+  utterance.lang = voice?.lang || language;
   utterance.volume = 1;
   utterance.rate = 1;
   utterance.pitch = 1;
@@ -36,6 +36,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const recognition = new SpeechRecognition();
   recognition.continuous = false;
   recognition.interimResults = true;
+  recognition.maxAlternatives = 5;
 
   voiceButton.addEventListener("click", () => {
     if (voiceButton.classList.contains("listening")) {
@@ -62,7 +63,16 @@ document.addEventListener("DOMContentLoaded", () => {
     input.value = transcript.trim();
 
     if (event.results[event.results.length - 1].isFinal) {
-      const spokenText = transcript.trim();
+      let spokenText = transcript.trim();
+      if (!spokenText) {
+        const firstResult = event.results[event.results.length - 1];
+        for (let i = 0; i < firstResult.length; i += 1) {
+          if (firstResult[i].transcript.trim()) {
+            spokenText = firstResult[i].transcript.trim();
+            break;
+          }
+        }
+      }
       if (spokenText) output(spokenText);
     }
   };
