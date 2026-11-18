@@ -1,5 +1,11 @@
 // Options the user could type in
 const prompts = [
+  ["හායි", "හෙලෝ", "හයි"],
+  ["ඔබ කොහොමද", "කොහොමද"],
+  ["මගේ නම කුමක්ද", "ඔයාගේ නම කුමක්ද"],
+  ["ඔබ කවුද", "ඔයා කවුද"],
+  ["ස්තූතියි", "ඔබට ස්තුතියි"],
+  ["යන්න", "බායි", "සමුගන්නම්"],
   ["hi", "hey", "hello", "good morning", "good afternoon"],
   ["how are you", "how is life", "how are things"],
   ["what are you doing", "what is going on", "what is up"],
@@ -30,6 +36,12 @@ const prompts = [
 // Possible responses, in corresponding order
 
 const replies = [
+  ["ආයුබෝවන්!", "ආයුබෝවන්, මම සන්බෝට්."],
+  ["හොඳින් ඇත. ඔබ කොහොමද?"],
+  ["මට නමක් නැත. ඔබට මාව සන්බෝට් කියලා කතා කරන්න පුළුවන්."],
+  ["මම රොබෝ චැට් බෝට් එකක්."],
+  ["ඔබට පිළිතුරු දෙන්න මම සතුටුයි."],
+  ["ගියෙකුත් දකිමු!", "ආයුබෝවන්!"],
   ["Hello!", "Hi!", "Hey!", "Hi there!","Howdy"],
   [
     "Fine... how are you?",

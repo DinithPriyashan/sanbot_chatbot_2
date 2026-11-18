@@ -17,7 +17,7 @@ function output(input) {
   // Remove digits - not sure if this is best
   // But solves problem of entering something like 'hi1'
 
-  let text = input.toLowerCase().replace(/[^\w\s]/gi, "").replace(/[\d]/gi, "").trim();
+  let text = input.toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, "").replace(/[\d]/gu, "").trim();
   text = text
     .replace(/ a /g, " ")   // 'tell me a story' -> 'tell me story'
     .replace(/i feel /g, "")
@@ -70,7 +70,13 @@ function addChat(input, product) {
   let userDiv = document.createElement("div");
   userDiv.id = "user";
   userDiv.className = "user response";
-  userDiv.innerHTML = `<img src="user.png" class="avatar"><span>${input}</span>`;
+  const userAvatar = document.createElement("img");
+  userAvatar.src = "user.png";
+  userAvatar.className = "avatar";
+  const userText = document.createElement("span");
+  userText.textContent = input;
+  userDiv.appendChild(userAvatar);
+  userDiv.appendChild(userText);
   messagesContainer.appendChild(userDiv);
 
   let botDiv = document.createElement("div");
