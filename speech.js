@@ -6,17 +6,24 @@ const textToSpeech = (string) => {
 
   synth.cancel();
   const utterance = new SpeechSynthesisUtterance(string);
-  const voices = synth.getVoices();
   const language = document.getElementById("voice-language")?.value || "en-US";
-  const voice = voices.find((item) => item.lang === language)
-    || voices.find((item) => item.lang.startsWith(language.split("-")[0]));
+  const speakWithAvailableVoice = () => {
+    const voices = synth.getVoices();
+    const voice = voices.find((item) => item.lang === language)
+      || voices.find((item) => item.lang.toLowerCase().startsWith(language.split("-")[0].toLowerCase()));
+    if (voice) utterance.voice = voice;
+    utterance.lang = voice?.lang || language;
+    synth.speak(utterance);
+  };
 
-  if (voice) utterance.voice = voice;
-  utterance.lang = voice?.lang || language;
   utterance.volume = 1;
   utterance.rate = 1;
   utterance.pitch = 1;
-  synth.speak(utterance);
+  if (synth.getVoices().length) {
+    speakWithAvailableVoice();
+  } else {
+    synth.addEventListener("voiceschanged", speakWithAvailableVoice, { once: true });
+  }
 };
 
 // Speech recognition for microphone input.
@@ -29,7 +36,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
   if (!SpeechRecognition) {
     voiceButton.disabled = true;
-    voiceStatus.textContent = "Voice input is not supported in this browser.";
+    voiceStatus.textContent = "Voice input needs Chrome or Edge.";
+    return;
+  }
+
+  if (!window.isSecureContext) {
+    voiceButton.disabled = true;
+    voiceStatus.textContent = "Open this page through HTTPS or localhost.";
     return;
   }
 
@@ -47,12 +60,23 @@ document.addEventListener("DOMContentLoaded", () => {
     recognition.lang = voiceLanguage.value;
     voiceStatus.textContent = "Listening...";
     voiceButton.classList.add("listening");
-    try {
-      recognition.start();
-    } catch (error) {
-      voiceStatus.textContent = "Could not start the microphone.";
-      voiceButton.classList.remove("listening");
-    }
+    navigator.mediaDevices.getUserMedia({ audio: true })
+      .then((stream) => {
+        stream.getTracks().forEach((track) => track.stop());
+        recognition.start();
+      })
+      .catch((error) => {
+        voiceButton.classList.remove("listening");
+        if (error.name === "NotAllowedError") {
+          voiceStatus.textContent = "Allow microphone access in the browser address-bar settings.";
+        } else if (error.name === "NotFoundError") {
+          voiceStatus.textContent = "No microphone found on this laptop.";
+        } else if (error.name === "NotReadableError") {
+          voiceStatus.textContent = "Microphone is busy. Close other apps using it.";
+        } else {
+          voiceStatus.textContent = "Could not access the microphone.";
+        }
+      });
   });
 
   recognition.onresult = (event) => {
@@ -73,7 +97,10 @@ document.addEventListener("DOMContentLoaded", () => {
           }
         }
       }
-      if (spokenText) output(spokenText);
+      if (spokenText) {
+        input.value = "";
+        output(spokenText);
+      }
     }
   };
 
