@@ -59,6 +59,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     recognition.lang = voiceLanguage.value;
     voiceStatus.textContent = "Listening...";
+    document.getElementById("robot-face").classList.add("listening");
+    document.getElementById("robot-state").textContent = "Listening...";
     voiceButton.classList.add("listening");
     navigator.mediaDevices.getUserMedia({ audio: true })
       .then((stream) => {
@@ -67,6 +69,7 @@ document.addEventListener("DOMContentLoaded", () => {
       })
       .catch((error) => {
         voiceButton.classList.remove("listening");
+        document.getElementById("robot-face").classList.remove("listening");
         if (error.name === "NotAllowedError") {
           voiceStatus.textContent = "Allow microphone access in the browser address-bar settings.";
         } else if (error.name === "NotFoundError") {
@@ -106,6 +109,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   recognition.onend = () => {
     voiceButton.classList.remove("listening");
+    document.getElementById("robot-face").classList.remove("listening");
     voiceStatus.textContent = "";
   };
 

@@ -13,9 +13,10 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-	background-color: rgba(223, 242, 247, .5);
+	background: radial-gradient(circle at 20% 20%, #193c66, #07111f 60%, #03070d);
 	height: 100%;
 	margin: 0;
+	color: #e7f6ff;
 }
 
 span {
@@ -29,16 +30,99 @@ span {
 	align-items: center;
 	width: 100%;
 	height: 100%;
+	gap: 42px;
+	padding: 30px;
 }
 
 .chat {
-	height: 300px;
-	width: 50vw;
+	height: min(680px, 90vh);
+	width: min(650px, 58vw);
 	display: flex;
 	flex-direction: column;
   justify-content: center;
 	align-items: center;
 } 
+
+.robot-panel {
+	width: 260px;
+	text-align: center;
+	position: relative;
+}
+
+.robot-panel h1 {
+	margin: 18px 0 4px;
+	letter-spacing: 5px;
+	text-transform: uppercase;
+	color: #76ddff;
+}
+
+.robot-panel p {
+	margin: 0;
+	color: #9ab7c8;
+	font-size: 13px;
+}
+
+.robot-face {
+	width: 210px;
+	height: 210px;
+	margin: auto;
+	position: relative;
+	border: 5px solid #61d9ff;
+	border-radius: 42% 42% 48% 48%;
+	background: linear-gradient(145deg, #d9f7ff, #6197ae);
+	box-shadow: 0 0 25px #23bce8, inset 0 -18px 28px rgba(0, 40, 70, .35);
+}
+
+.antenna {
+	position: absolute;
+	top: -35px;
+	left: 98px;
+	width: 5px;
+	height: 32px;
+	background: #61d9ff;
+}
+
+.antenna::before {
+	content: "";
+	position: absolute;
+	top: -9px;
+	left: -6px;
+	width: 15px;
+	height: 15px;
+	border-radius: 50%;
+	background: #ffda65;
+	box-shadow: 0 0 14px #ffda65;
+}
+
+.robot-eyes {
+	display: flex;
+	justify-content: space-around;
+	margin: 70px 38px 0;
+}
+
+.robot-eyes span {
+	width: 30px;
+	height: 38px;
+	padding: 0;
+	border-radius: 50%;
+	background: #08243a;
+	box-shadow: inset 0 0 0 6px #bdf4ff, 0 0 12px #fff;
+}
+
+.robot-mouth {
+	width: 64px;
+	height: 18px;
+	margin: 27px auto 0;
+	border-bottom: 5px solid #08243a;
+	border-radius: 50%;
+}
+
+.robot-face.thinking .robot-eyes span { animation: blink 1s infinite; }
+.robot-face.listening { box-shadow: 0 0 42px #ffda65, inset 0 -18px 28px rgba(0, 40, 70, .35); }
+.robot-face.speaking .robot-mouth { animation: speak 0.25s infinite alternate; }
+
+@keyframes blink { 50% { transform: scaleY(.18); } }
+@keyframes speak { to { height: 28px; width: 42px; } }
 
 ::-webkit-input-placeholder { 
 	color: .711 
@@ -49,6 +133,7 @@ input {
 	padding: 15px; 
 	margin-left: auto;
 	border-radius: 10px; 
+	background: #edfaff;
 }
 
 .chat-controls {
@@ -72,6 +157,17 @@ input {
 	color: white;
 	cursor: pointer;
 	font-size: 18px;
+}
+
+#send-button {
+	width: 46px;
+	height: 46px;
+	border: 0;
+	border-radius: 50%;
+	background: #20b981;
+	color: white;
+	cursor: pointer;
+	font-size: 21px;
 }
 
 #voice-button.listening {
@@ -104,10 +200,11 @@ input {
 	overflow: scroll;
 	height: 90%;
 	width: 100%;
-	background-color: white;
+	background-color: rgba(9, 25, 41, .92);
 	padding: 15px;
 	margin: 15px;
 	border-radius: 10px;
+	border: 1px solid rgba(118, 221, 255, .25);
 }
 
 #bot {
@@ -127,7 +224,13 @@ input {
 	display: flex;
 	align-items: center;
 	margin: 1%;
+	padding: 8px 12px;
+	border-radius: 14px;
+	max-width: 90%;
 }
+
+.user { background: #12658a; }
+.bot { background: #173a53; }
 
 
 /* Mobile */
@@ -135,10 +238,14 @@ input {
 @media only screen and (max-width: 980px) {
   .container {
 		flex-direction: column; 
-		justify-content: flex-start;
+		justify-content: center;
+		gap: 10px;
+		padding: 18px;
 	}
+	.robot-panel { transform: scale(.72); height: 185px; }
 	.chat {
-		width: 75vw;
-		margin: 10vw;
+		width: min(92vw, 650px);
+		height: 58vh;
+		margin: 0;
 	}
 }

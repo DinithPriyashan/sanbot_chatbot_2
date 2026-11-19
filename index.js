@@ -1,12 +1,24 @@
 document.addEventListener("DOMContentLoaded", () => {
   const inputField = document.getElementById("input");
+  const sendButton = document.getElementById("send-button");
+  const robotState = document.getElementById("robot-state");
+
+  const sendMessage = () => {
+    const input = inputField.value.trim();
+    if (!input) return;
+    inputField.value = "";
+    output(input);
+  };
+
   inputField.addEventListener("keydown", (e) => {
-    if (e.code === "Enter") {
-      let input = inputField.value;
-      inputField.value = "";
-      output(input);
-    }
+    if (e.code === "Enter") sendMessage();
   });
+  sendButton.addEventListener("click", sendMessage);
+
+  robotState.textContent = "Online - listening";
+  setTimeout(() => {
+    addChat("", document.getElementById("welcome-message").textContent);
+  }, 350);
 });
 
 function output(input) {
@@ -73,17 +85,19 @@ function compare(promptsArray, repliesArray, string) {
 function addChat(input, product) {
   const messagesContainer = document.getElementById("messages");
 
-  let userDiv = document.createElement("div");
-  userDiv.id = "user";
-  userDiv.className = "user response";
-  const userAvatar = document.createElement("img");
-  userAvatar.src = "user.png";
-  userAvatar.className = "avatar";
-  const userText = document.createElement("span");
-  userText.textContent = input;
-  userDiv.appendChild(userAvatar);
-  userDiv.appendChild(userText);
-  messagesContainer.appendChild(userDiv);
+  if (input) {
+    const userDiv = document.createElement("div");
+    userDiv.id = "user";
+    userDiv.className = "user response";
+    const userAvatar = document.createElement("img");
+    userAvatar.src = "user.png";
+    userAvatar.className = "avatar";
+    const userText = document.createElement("span");
+    userText.textContent = input;
+    userDiv.appendChild(userAvatar);
+    userDiv.appendChild(userText);
+    messagesContainer.appendChild(userDiv);
+  }
 
   let botDiv = document.createElement("div");
   let botImg = document.createElement("img");
@@ -96,14 +110,22 @@ function addChat(input, product) {
   botDiv.appendChild(botText);
   botDiv.appendChild(botImg);
   messagesContainer.appendChild(botDiv);
+  document.getElementById("robot-face").classList.add("thinking");
+  document.getElementById("robot-state").textContent = "Thinking...";
   // Keep messages at most recent
   messagesContainer.scrollTop = messagesContainer.scrollHeight - messagesContainer.clientHeight;
 
   // Fake delay to seem "real"
   setTimeout(() => {
     botText.innerText = `${product}`;
+    document.getElementById("robot-face").classList.remove("thinking");
+    document.getElementById("robot-face").classList.add("speaking");
+    document.getElementById("robot-state").textContent = "Speaking...";
     textToSpeech(product)
-  }, 2000
-  )
+    setTimeout(() => {
+      document.getElementById("robot-face").classList.remove("speaking");
+      document.getElementById("robot-state").textContent = "Online - listening";
+    }, Math.max(1800, product.length * 45));
+  }, input ? 700 : 250);
 
 }

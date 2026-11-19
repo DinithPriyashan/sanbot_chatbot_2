@@ -2,17 +2,29 @@
 <html>
 
 <head>
-	<title>Chatbot</title>
+	<meta charset="UTF-8" />
+	<title>Sanbot Assistant</title>
 	<link rel="icon" href="bot.png" />
 	<link rel="stylesheet" href="style.css" />
 </head>
 
 <body>
 	<div id="container" class="container">
+		<section class="robot-panel" aria-label="Sanbot robot">
+			<div class="robot-glow"></div>
+			<div class="robot-face" id="robot-face">
+				<div class="antenna"></div>
+				<div class="robot-eyes"><span></span><span></span></div>
+				<div class="robot-mouth"></div>
+			</div>
+			<h1>Sanbot</h1>
+			<p id="robot-state">Ready to help</p>
+		</section>
 		<div id="chat" class="chat">
 			<div id="messages" class="messages"></div>
 			<div class="chat-controls">
 				<input id="input" type="text" placeholder="Type or say something..." autocomplete="off" autofocus="true" />
+				<button id="send-button" type="button" aria-label="Send message" title="Send message">&#10148;</button>
 				<button id="voice-button" type="button" aria-label="Start voice input" title="Start voice input">
 					<span id="voice-button-icon" aria-hidden="true">&#127908;</span>
 				</button>
@@ -22,12 +34,12 @@
 				</select>
 			</div>
 			<div id="voice-status" class="voice-status" aria-live="polite"></div>
+			<div id="welcome-message" hidden>ආයුබෝවන්! මම සන්බෝට්. මට කතා කරන්න හෝ message එකක් type කරන්න.</div>
 		</div>
-		<img src="bot.png" alt="Robot cartoon" height="500vh">
 	</div>
 </body>
-<script type="text/javascript" src="index.js" ></script>
 <script type="text/javascript" src="constants.js" ></script>
+<script type="text/javascript" src="index.js" ></script>
 <script type="text/javascript" src="speech.js" ></script>
 
 </html>
