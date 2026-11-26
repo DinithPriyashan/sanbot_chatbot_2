@@ -26,7 +26,7 @@ const textToSpeech = (string) => {
   }
 };
 
-// Prefer Sanbot voice input on the robot and fall back to browser recognition.
+// Prefer the native bridge on Sanbot and use browser recognition elsewhere.
 document.addEventListener("DOMContentLoaded", () => {
   const voiceButton = document.getElementById("voice-button");
   const voiceStatus = document.getElementById("voice-status");
@@ -35,15 +35,12 @@ document.addEventListener("DOMContentLoaded", () => {
   const sendButton = document.getElementById("send-button");
   const robotFace = document.getElementById("robot-face");
   const robotState = document.getElementById("robot-state");
-  const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  const recognition = Recognition ? new Recognition() : null;
+  let nativeBridge = null;
+  let recognition = null;
   let listeningWith = null;
-
-  if (recognition) {
-    recognition.continuous = false;
-    recognition.interimResults = false;
-    recognition.maxAlternatives = 1;
-  }
+  let currentSession = null;
+  let cleanedUp = false;
+  let voiceErrorVisible = false;
 
   const setListening = (listening) => {
     voiceButton.classList.toggle("listening", listening);
@@ -55,16 +52,20 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   };
 
-  const showVoiceError = (action, error) => {
+  const showVoiceError = (message) => {
+    voiceErrorVisible = true;
+    if (currentSession) currentSession.cancelled = true;
     listeningWith = null;
     setListening(false);
-    voiceStatus.textContent = error instanceof Error && error.message
-      ? error.message
-      : `Could not ${action} voice input.`;
+    voiceStatus.textContent = message;
   };
 
-  const sendVoiceResult = (text) => {
+  const sendVoiceResult = (text, source) => {
     if (typeof text !== "string" || !text.trim()) return;
+    if (!currentSession || currentSession.cancelled || currentSession.resultHandled) return;
+    if (source && currentSession.source !== source) return;
+
+    currentSession.resultHandled = true;
     input.value = text.trim();
     listeningWith = null;
     setListening(false);
@@ -72,81 +73,197 @@ document.addEventListener("DOMContentLoaded", () => {
     sendButton.click();
   };
 
-  const hasSanbotVoiceInput = () => window.Sanbot
-    && typeof window.Sanbot.startVoiceInput === "function"
-    && typeof window.Sanbot.stopVoiceInput === "function";
+  const createBrowserRecognition = () => {
+    if (recognition) return recognition;
+    const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!Recognition) return null;
+
+    recognition = new Recognition();
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+    recognition.onresult = (event) => {
+      const result = event.results[event.resultIndex];
+      if (result && result[0]) sendVoiceResult(result[0].transcript, "browser");
+    };
+    recognition.onend = () => {
+      if (currentSession && currentSession.source === "browser" && !currentSession.resultHandled) {
+        currentSession.cancelled = true;
+      }
+      listeningWith = null;
+      setListening(false);
+      if (voiceStatus.textContent === "Listening...") {
+        voiceStatus.textContent = "Voice input stopped.";
+      }
+    };
+    recognition.onerror = (event) => {
+      if (event.error === "not-allowed" || event.error === "service-not-allowed") {
+        showVoiceError("Microphone permission was denied. Allow microphone access in your browser settings.");
+      } else if (event.error === "no-speech") {
+        showVoiceError("No speech detected. Try again.");
+      } else if (event.error === "audio-capture") {
+        showVoiceError("No microphone is available.");
+      } else {
+        showVoiceError("Voice input could not be completed.");
+      }
+    };
+    return recognition;
+  };
 
   const stopListening = () => {
     const source = listeningWith;
+    if (currentSession) currentSession.cancelled = true;
     listeningWith = null;
     setListening(false);
-    voiceStatus.textContent = "";
+    voiceStatus.textContent = "Voice input stopped.";
 
     try {
-      const result = source === "sanbot"
-        ? window.Sanbot.stopVoiceInput()
-        : recognition.stop();
-      Promise.resolve(result).catch((error) => showVoiceError("stop", error));
+      if (source === "sanbot") {
+        if (typeof nativeBridge.stopVoiceInput !== "function") {
+          voiceStatus.textContent = "Sanbot voice bridge cannot stop listening.";
+          return;
+        }
+        Promise.resolve(nativeBridge.stopVoiceInput()).catch((error) => {
+          showVoiceError(error instanceof Error ? error.message : "Could not stop voice input.");
+        });
+      } else if (source === "browser" && recognition) {
+        recognition.stop();
+      }
     } catch (error) {
-      showVoiceError("stop", error);
+      showVoiceError(error instanceof Error ? error.message : "Could not stop voice input.");
     }
   };
 
-  voiceButton.addEventListener("click", () => {
+  const startListening = () => {
+    nativeBridge = window.Sanbot;
+    const hasNativeBridge = Boolean(nativeBridge);
+    let browserRecognition = null;
+    if (!hasNativeBridge) {
+      try {
+        browserRecognition = createBrowserRecognition();
+      } catch (error) {
+        voiceStatus.textContent = error instanceof Error
+          ? error.message
+          : "Could not initialize browser voice input.";
+        return;
+      }
+    }
+
+    if (hasNativeBridge && typeof nativeBridge.startVoiceInput !== "function") {
+      voiceStatus.textContent = "Sanbot voice bridge cannot start listening.";
+      return;
+    }
+
+    if (!hasNativeBridge && !browserRecognition) {
+      voiceStatus.textContent = "Voice input is unavailable in this browser.";
+      return;
+    }
+
+    currentSession = {
+      source: hasNativeBridge ? "sanbot" : "browser",
+      resultHandled: false,
+      cancelled: false
+    };
+    voiceErrorVisible = false;
+    listeningWith = currentSession.source;
+    setListening(true);
+    voiceStatus.textContent = "Listening...";
+
+    try {
+      if (hasNativeBridge) {
+        Promise.resolve(nativeBridge.startVoiceInput()).catch((error) => {
+          showVoiceError(error instanceof Error ? error.message : "Could not start Sanbot voice input.");
+        });
+      } else {
+        browserRecognition.lang = voiceLanguage.value;
+        browserRecognition.start();
+      }
+    } catch (error) {
+      showVoiceError(error instanceof Error ? error.message : "Could not start voice input.");
+    }
+  };
+
+  const onVoiceButtonClick = () => {
     if (listeningWith) {
       stopListening();
       return;
     }
 
-    if (!hasSanbotVoiceInput() && !recognition) {
-      voiceStatus.textContent = window.isSecureContext
-        ? "Voice input is not supported in this browser."
-        : "Voice input requires HTTPS or localhost.";
-      return;
+    startListening();
+  };
+  voiceButton.addEventListener("click", onVoiceButtonClick);
+
+  const onSanbotVoiceResult = (text) => sendVoiceResult(text, "sanbot");
+  const onSanbotVoiceError = (message) => {
+    const errorMessage = typeof message === "string" && message.trim()
+      ? message.trim()
+      : "Sanbot voice recognition failed.";
+    showVoiceError(errorMessage);
+  };
+  const onSanbotVoiceState = (state) => {
+    if (typeof state !== "string" || !window.Sanbot) return;
+    nativeBridge = window.Sanbot;
+    const normalizedState = state.trim().toLowerCase();
+    if (normalizedState === "listening") {
+      if (!currentSession || currentSession.source !== "sanbot" || currentSession.cancelled) {
+        currentSession = {
+          source: "sanbot",
+          resultHandled: false,
+          cancelled: false
+        };
+      }
+      voiceErrorVisible = false;
+      listeningWith = "sanbot";
+      setListening(true);
+      voiceStatus.textContent = "Listening...";
+    } else if (normalizedState === "stopped") {
+      if (currentSession && currentSession.source === "sanbot") listeningWith = null;
+      setListening(false);
+      if (!voiceErrorVisible) voiceStatus.textContent = "Voice input stopped.";
+    }
+  };
+
+  window.onSanbotVoiceResult = onSanbotVoiceResult;
+  window.onSanbotVoiceError = onSanbotVoiceError;
+  window.onSanbotVoiceState = onSanbotVoiceState;
+
+  const cleanup = () => {
+    if (cleanedUp) return;
+    cleanedUp = true;
+    const source = listeningWith;
+    if (currentSession) currentSession.cancelled = true;
+    listeningWith = null;
+    voiceButton.removeEventListener("click", onVoiceButtonClick);
+
+    if (recognition) {
+      recognition.onresult = null;
+      recognition.onend = null;
+      recognition.onerror = null;
     }
 
-    setListening(true);
-    voiceStatus.textContent = "Listening...";
-    try {
-      listeningWith = hasSanbotVoiceInput() ? "sanbot" : "browser";
-      let result;
-      if (listeningWith === "sanbot") {
-        result = window.Sanbot.startVoiceInput();
-      } else {
-        recognition.lang = voiceLanguage.value;
-        result = recognition.start();
+    if (source === "sanbot" && typeof nativeBridge.stopVoiceInput === "function") {
+      try {
+        Promise.resolve(nativeBridge.stopVoiceInput()).catch((error) => {
+          console.error("Could not stop Sanbot voice input during cleanup.", error);
+        });
+      } catch (error) {
+        console.error("Could not stop Sanbot voice input during cleanup.", error);
       }
-      Promise.resolve(result).catch((error) => showVoiceError("start", error));
-    } catch (error) {
-      showVoiceError("start", error);
+    } else if (source === "browser" && recognition) {
+      try {
+        recognition.stop();
+      } catch (error) {
+        console.error("Could not stop browser voice input during cleanup.", error);
+      }
     }
-  });
 
-  if (recognition) {
-    recognition.onresult = (event) => {
-      const result = event.results[event.resultIndex];
-      if (result && result[0]) sendVoiceResult(result[0].transcript);
-    };
+    if (window.onSanbotVoiceResult === onSanbotVoiceResult) window.onSanbotVoiceResult = null;
+    if (window.onSanbotVoiceError === onSanbotVoiceError) window.onSanbotVoiceError = null;
+    if (window.onSanbotVoiceState === onSanbotVoiceState) window.onSanbotVoiceState = null;
+    window.removeEventListener("pagehide", cleanup);
+    window.removeEventListener("beforeunload", cleanup);
+  };
 
-    recognition.onend = () => {
-      listeningWith = null;
-      setListening(false);
-    };
-
-    recognition.onerror = (event) => {
-      listeningWith = null;
-      setListening(false);
-      if (event.error === "not-allowed" || event.error === "service-not-allowed") {
-        voiceStatus.textContent = "Allow microphone access in your browser settings.";
-      } else if (event.error === "no-speech") {
-        voiceStatus.textContent = "No speech detected. Try again.";
-      } else if (event.error === "audio-capture") {
-        voiceStatus.textContent = "No microphone is available.";
-      } else {
-        voiceStatus.textContent = "Voice input could not be completed.";
-      }
-    };
-  }
-
-  window.onSanbotVoiceResult = sendVoiceResult;
+  window.addEventListener("pagehide", cleanup, { once: true });
+  window.addEventListener("beforeunload", cleanup, { once: true });
 });
